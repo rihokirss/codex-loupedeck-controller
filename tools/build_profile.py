@@ -6,6 +6,7 @@ from __future__ import annotations
 import base64
 import argparse
 import copy
+import hashlib
 import json
 import math
 import shutil
@@ -235,10 +236,9 @@ def config_for_target(base_config: dict, target: str) -> dict:
         return config
 
     profile = config["profile"]
-    profile["name"] = "Codex Controller Live S 1.1.1"
+    profile["name"] = "Codex Controller Live S " + profile["version"]
     profile["description"] = "A four-workspace Loupedeck Live S controller for the Codex desktop app."
     profile["deviceType"] = "Loupedeck50"
-    profile["version"] = "1.1.1"
     for page in config["pages"]:
         page["buttons"] = LIVE_S_PAGE_BUTTONS[page["id"]]
     config["dials"] = [
@@ -342,6 +342,31 @@ def macro_for(action: dict, mode_name: str) -> dict:
 
 def macro_ref(action_id: str) -> str:
     return f"$@Generic___@Macro___{stable_id('macro', action_id)}"
+
+
+def action_ref(action_id: str, actions: dict) -> str:
+    if actions[action_id]["type"] == "text":
+        return f"$@Generic___@ProfileAction___{stable_id('profile-action', action_id)}"
+    return macro_ref(action_id)
+
+
+def text_action_for(action: dict, actions: dict) -> dict:
+    # Native text actions keep stable IDs and custom icons across service reloads.
+    return typed_dict(
+        "Loupedeck.Service.ApplicationProfileCommand, LoupedeckService",
+        isCommand=True,
+        name=action_ref(action["id"], actions),
+        templateActionName="$@Generic___@SendText",
+        actionParameters=typed_dict(
+            "Loupedeck.ActionEditorActionParameters, PluginApi",
+            parameters=typed_dict("Loupedeck.StringDictionaryNoCase, PluginApi", text=action["text"], useClipboard="false"),
+            count=2,
+        ),
+        displayName=action["displayName"], description=action.get("description", ""),
+        groupName=action.get("group", "Codex"), superGroupName="@macro",
+        isProfileAction=True, isMultiState=False, isResetCommand=False,
+        adjustmentName=None, states=None,
+    )
 
 
 def adjustment_ref(adjustment_id: str) -> str:
@@ -832,7 +857,7 @@ def shortcut_markdown(config: dict, actions: dict) -> str:
                 "5. New Chat",
                 "6. Quick Chat",
                 "7. Toggle Review Panel",
-                "8. Dictation",
+                f"8. {actions[config['roundButtons'][7]['action']]['displayName']}",
                 "",
                 "## Square buttons",
                 "",
@@ -891,7 +916,8 @@ def build(target: str = "ct") -> None:
     package_id = stable_id("package", profile_cfg["name"])
     mode_name = profile_cfg["modeName"]
     workspace_ids = {page["id"]: stable_id("workspace", page["id"]) for page in config["pages"]}
-    action_macros = [macro_for(action, mode_name) for action in config["actions"]]
+    action_macros = [macro_for(action, mode_name) for action in config["actions"] if action["type"] != "text"]
+    native_text_actions = [text_action_for(action, actions) for action in config["actions"] if action["type"] == "text"]
 
     adjustments: list[dict] = []
     dial_adjustment_ids: list[str | None] = []
@@ -917,7 +943,7 @@ def build(target: str = "ct") -> None:
                 name=touch_id,
                 displayName=page["name"],
                 description=f"Codex {page['name']} controls",
-                controls=[button_control(macro_ref(action_id)) for action_id in page["buttons"]],
+                controls=[button_control(action_ref(action_id, actions)) for action_id in page["buttons"]],
                 dynamicPageName=None,
                 dynamicPagePluginName=None,
                 dynamicPageNumber=0,
@@ -928,7 +954,7 @@ def build(target: str = "ct") -> None:
             if "nativeAdjustment" in dial:
                 encoder_controls.append(encoder_control(dial["nativePress"], dial["nativeAdjustment"]))
             else:
-                encoder_controls.append(encoder_control(macro_ref(dial["press"]), adjustment_ref(adjustment_id)))
+                encoder_controls.append(encoder_control(action_ref(dial["press"], actions), adjustment_ref(adjustment_id)))
         if is_live_s:
             encoder_controls.extend(encoder_control(None, None) for _ in range(6 - len(encoder_controls)))
         encoder_pages.append(
@@ -954,7 +980,7 @@ def build(target: str = "ct") -> None:
                     "Loupedeck.StringDictionaryNoCase, PluginApi",
                     adjustment=adjustment_ref("reasoning"),
                     actions=",".join(
-                        macro_ref(config["wheel"][key]) for key in ("left", "center", "right")
+                        action_ref(config["wheel"][key], actions) for key in ("left", "center", "right")
                     ),
                 ),
             )
@@ -978,7 +1004,7 @@ def build(target: str = "ct") -> None:
         if "workspace" in item:
             press = f"$@Generic___@ChangeWorkspace___{mode_name}|{workspace_ids[item['workspace']]}"
         else:
-            press = macro_ref(item["action"])
+            press = action_ref(item["action"], actions)
         round_controls.append(button_control(press))
     if is_live_s:
         round_controls.extend(button_control() for _ in range(8 - len(round_controls)))
@@ -989,8 +1015,8 @@ def build(target: str = "ct") -> None:
         for name, index in square_positions.items():
             mapping = config["squareButtons"][name]
             square[index] = button_control(
-                macro_ref(mapping["press"]),
-                macro_ref(mapping["fn"]) if mapping.get("fn") else None,
+                action_ref(mapping["press"], actions),
+                action_ref(mapping["fn"], actions) if mapping.get("fn") else None,
             )
 
     layout_mode = typed_dict(
@@ -1061,7 +1087,7 @@ def build(target: str = "ct") -> None:
         conversionHistory="",
         packageName=package_id,
         packageVersion=profile_cfg["version"],
-        profileActions=[],
+        profileActions=native_text_actions,
     )
     app_info = typed_dict(
         "Loupedeck.Service.SupportedApplicationInfo, LoupedeckService",
@@ -1103,7 +1129,7 @@ def build(target: str = "ct") -> None:
         else:
             image = action_icon_png(action, palette)
             image_file_name = f"{action['id']}.png"
-        icon_name = f"$@Generic___@Macro___{stable_id('macro', action['id'])}.ict"
+        icon_name = action_ref(action["id"], actions) + ".ict"
         (PACKAGE / "ActionIcons" / icon_name).write_text(
             json.dumps(ict_for(image, image_file_name, "#000000" if action.get("lucideIcon") else "#0B0F14"), indent=2) + "\n",
             encoding="utf-8",
@@ -1177,3 +1203,8 @@ if __name__ == "__main__":
     targets = ("ct", "live-s") if args.target == "all" else (args.target,)
     for selected_target in targets:
         build(selected_target)
+    packages = [DIST / name for name in ("Codex-Controller.LP4", "Codex-Controller-Live-S.LP4")]
+    (DIST / "SHA256SUMS.txt").write_text(
+        "".join(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in packages if path.is_file()),
+        encoding="utf-8",
+    )

@@ -95,7 +95,7 @@ Generated from `src/profile.json`. Quick-text and skill buttons insert text only
 5. New Chat
 6. Quick Chat
 7. Toggle Review Panel
-8. Dictation
+8. Toggle Voice Chat
 
 ## Square buttons
 

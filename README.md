@@ -2,11 +2,21 @@
 
 A polished four-page controller for the Codex Windows app, with separate profiles for Loupedeck CT and Loupedeck Live S. It provides Codex commands, task navigation, reusable skill prompts, quick text, dials, keyboard shortcuts, and custom Lucide/shadcn-style icons.
 
+Inspired by Work Louder's [Codex Micro](https://worklouder.cc/codex-micro).
+
+[Download the latest release](https://github.com/rihokirss/codex-loupedeck-controller/releases/latest) · [Release notes](CHANGELOG.md)
+
 ### Loupedeck CT
 
 | Commands page | Agents page |
 |---|---|
 | ![Commands page on a Loupedeck CT](docs/codex-controller-loupedeck-ct.png) | ![Agents page on a Loupedeck CT](docs/codex-controller-agents-page.png) |
+
+| Skills page | Quick Text page |
+|---|---|
+| ![Skills page in the Loupedeck CT configuration app](docs/codex-controller-skills-page.png) | ![Quick Text page in the Loupedeck CT configuration app](docs/codex-controller-quick-text-page.png) |
+
+These are cropped captures of the actual CT configuration view, not generated hardware mockups. The overview below explains every mapping; some longer action captions are abbreviated by Loupedeck itself.
 
 Full CT mapping:
 
@@ -98,7 +108,7 @@ The installed bindings are:
 2. Open profile management and choose **Import**.
 3. Select `dist/Codex-Controller.LP4` for CT or `dist/Codex-Controller-Live-S.LP4` for Live S.
 4. Associate it with Codex or `ChatGPT.exe` if Loupedeck asks.
-5. Make **Codex Controller** (CT) or **Codex Controller Live S 1.1.1** (Live S) the default profile for that application.
+5. Make **Codex Controller** (CT) or **Codex Controller Live S 1.2.0** (Live S) the default profile for that application.
 6. Enable automatic application following/profile switching.
 
 When Codex is focused, Loupedeck should select the `chatgpt` application profile. When another application is focused, it should return to that application's profile or System.
@@ -122,7 +132,7 @@ The touchscreen and round Dictate controls use Windows Voice Typing (`Win+H`) in
 
 On Live S, turn the bottom dial to adjust reasoning effort and press it to start or stop Codex Voice Chat. On CT, round button 8 starts or stops Voice Chat. The Commands-page Dictate control remains available on both devices for Windows Voice Typing.
 
-The Live S package uses the visible name **Codex Controller Live S 1.1.1** so it remains selectable when Loupedeck retains an older profile. After importing, select the 1.1.1 profile and make it the default for Codex. Once the updated controls and icons are confirmed, the older Live S profiles can be deleted.
+The Live S package uses the visible name **Codex Controller Live S 1.2.0** so it remains selectable when Loupedeck retains an older profile. After importing, select the 1.2.0 profile and make it the default for Codex. Once the updated controls and icons are confirmed, the older Live S profiles can be deleted.
 
 ## Troubleshooting
 
@@ -183,6 +193,14 @@ The generator recreates:
 - the layout and shortcut reference sheets.
 
 The generator uses stable action IDs, so unchanged controls retain their IDs between builds. Review the generated reference files and repeat the physical checklist after every material mapping change.
+
+Reusable text and skill prompts use native text actions with matching custom-icon IDs. This avoids the default clipboard icons that can appear when Loupedeck converts old text macros on import. Prompts still insert text only and never press Enter.
+
+Validate both packages without installing anything:
+
+```powershell
+py tools\validate_packages.py
+```
 
 ## Project structure
 

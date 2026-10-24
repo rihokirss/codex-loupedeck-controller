@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Build the editable Codex Controller sources into a Loupedeck CT LP4 profile."""
+"""Build the editable Codex Controller sources into Loupedeck LP4 profiles."""
 
 from __future__ import annotations
 
 import base64
+import argparse
+import copy
 import json
 import math
 import shutil
@@ -201,6 +203,49 @@ DIAL_LUCIDE_ICONS = {
     "Reasoning": "brain-circuit",
     "Tabs": "panels-top-left",
 }
+
+
+LIVE_S_PAGE_BUTTONS = {
+    "commands": [
+        "new_chat", "quick_chat", "side_chat", "search_chats", "open_folder",
+        "command_menu", "review_tab", "toggle_terminal", "toggle_bottom", "toggle_sidebar",
+        "dictation", "shortcut_help", "plan_toggle", "reason_cycle", "fast_toggle",
+    ],
+    "agents": [
+        "previous_agent", "next_agent", "search_chats", "previous_tab", "next_tab",
+        "new_chat", "side_chat", "standalone_chat", "continue_new", "archive_chat",
+        "toggle_pin", "copy_markdown", "agent_status", "handoff", "go_latest",
+    ],
+    "skills": [
+        "skill_picker", "skill_openai_docs", "skill_browser", "skill_github", "skill_fix_ci",
+        "skill_documents", "skill_pdf", "skill_slides", "skill_sheets", "skill_visualize",
+        "review_tab", "plan_toggle", "reason_cycle", "validate_all", "finish_it",
+    ],
+    "quick_text": [
+        "finish_it", "agent_status", "root_cause", "validate_all", "update_docs",
+        "simplify", "handoff", "test_first", "edge_cases", "security_review",
+        "performance_check", "explain_change", "new_chat", "plan_toggle", "reason_cycle",
+    ],
+}
+
+
+def config_for_target(base_config: dict, target: str) -> dict:
+    config = copy.deepcopy(base_config)
+    if target == "ct":
+        return config
+
+    profile = config["profile"]
+    profile["name"] = "Codex Controller Live S 1.1.1"
+    profile["description"] = "A four-workspace Loupedeck Live S controller for the Codex desktop app."
+    profile["deviceType"] = "Loupedeck50"
+    profile["version"] = "1.1.1"
+    for page in config["pages"]:
+        page["buttons"] = LIVE_S_PAGE_BUTTONS[page["id"]]
+    config["dials"] = [
+        {"position": "Top", "name": "Agents", "left": "previous_agent", "right": "next_agent", "press": "search_chats"},
+        {"position": "Bottom", "name": "Reasoning", "left": "reason_decrease", "right": "reason_increase", "press": "voice_chat"},
+    ]
+    return config
 
 
 def load_font(path: Path, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -589,6 +634,109 @@ def reference_png(config: dict, actions: dict) -> bytes:
     return stream.getvalue()
 
 
+def live_s_page_preview(config: dict, actions: dict, page_id: str) -> bytes:
+    palette = config["palette"]
+    page = next(item for item in config["pages"] if item["id"] == page_id)
+    color = palette[page["color"]]
+    image = Image.new("RGB", (1000, 720), palette["background"])
+    draw = ImageDraw.Draw(image)
+    title_font = load_font(FONT_BOLD, 42)
+    label_font = load_font(FONT_SEMIBOLD, 19)
+    small_font = load_font(FONT_REGULAR, 16)
+
+    draw.text((45, 30), f"LIVE S  ·  {page['name'].upper()}", font=title_font, fill=color)
+    draw.rounded_rectangle((40, 100, 810, 590), radius=24, fill="#111827", outline="#334155", width=4)
+    cell_w, cell_h = 138, 130
+    for index, action_id in enumerate(page["buttons"]):
+        action = actions[action_id]
+        x = 65 + (index % 5) * 148
+        y = 135 + (index // 5) * 145
+        draw.rounded_rectangle((x, y, x + cell_w, y + cell_h), radius=12, fill="#0F172A", outline=color, width=3)
+        label = action["shortLabel"].upper()
+        font = fit_text(draw, label, cell_w - 20, 20, 14)
+        bbox = draw.textbbox((0, 0), label, font=font)
+        draw.text((x + (cell_w - (bbox[2] - bbox[0])) / 2, y + 43), label, font=font, fill=palette["foreground"])
+
+    draw.text((845, 135), "TOP", font=label_font, fill=palette["system"])
+    draw.ellipse((850, 175, 950, 275), fill="#111827", outline=palette["system"], width=4)
+    draw.text((840, 290), "TASKS", font=label_font, fill=palette["foreground"])
+    draw.text((835, 320), "press: search", font=small_font, fill=palette["muted"])
+    draw.text((835, 390), "BOTTOM", font=label_font, fill=palette["reasoning"])
+    draw.ellipse((850, 435, 950, 535), fill="#111827", outline=palette["reasoning"], width=4)
+    draw.text((820, 550), "REASONING", font=label_font, fill=palette["foreground"])
+    bottom_dial = config["dials"][1]
+    bottom_press = actions[bottom_dial["press"]]["shortLabel"].lower()
+    draw.text((825, 580), f"press: {bottom_press}", font=small_font, fill=palette["muted"])
+
+    button_names = ("COMMANDS", "AGENTS", "SKILLS", "QUICK TEXT")
+    for index, name in enumerate(button_names):
+        x = 75 + index * 215
+        draw.ellipse((x, 630, x + 34, 664), fill=palette["muted"])
+        draw.text((x + 46, 636), name, font=small_font, fill=palette["foreground"])
+
+    from io import BytesIO
+
+    stream = BytesIO()
+    image.save(stream, "PNG", optimize=True)
+    return stream.getvalue()
+
+
+def live_s_reference_png(config: dict, actions: dict) -> bytes:
+    palette = config["palette"]
+    width, height = 2600, 3000
+    image = Image.new("RGB", (width, height), palette["background"])
+    draw = ImageDraw.Draw(image)
+    title_font = load_font(FONT_BOLD, 74)
+    h1_font = load_font(FONT_BOLD, 40)
+    h2_font = load_font(FONT_SEMIBOLD, 28)
+    body_font = load_font(FONT_REGULAR, 23)
+    small_font = load_font(FONT_REGULAR, 19)
+    draw.text((90, 65), "CODEX CONTROLLER · LOUPEDECK LIVE S", font=title_font, fill=palette["foreground"])
+    draw.text((94, 150), "Four workspaces · 15 touch controls · two consistent dials", font=h2_font, fill=palette["muted"])
+
+    card_w, card_h = 1170, 1030
+    for page_index, page in enumerate(config["pages"]):
+        col, row = page_index % 2, page_index // 2
+        x = 90 + col * 1260
+        y = 240 + row * 1100
+        color = palette[page["color"]]
+        draw.rounded_rectangle((x, y, x + card_w, y + card_h), radius=28, fill="#111827", outline=color, width=5)
+        draw.text((x + 34, y + 24), f"BUTTON {page_index + 1}  ·  {page['name'].upper()}", font=h1_font, fill=color)
+        cell_w, cell_h = 208, 245
+        for index, action_id in enumerate(page["buttons"]):
+            action = actions[action_id]
+            cx = x + 34 + (index % 5) * 222
+            cy = y + 105 + (index // 5) * 270
+            draw.rounded_rectangle((cx, cy, cx + cell_w, cy + cell_h), radius=16, fill="#0F172A", outline="#334155", width=2)
+            draw.rectangle((cx, cy, cx + cell_w, cy + 9), fill=color)
+            name = action["displayName"].upper()
+            font = fit_text(draw, name, cell_w - 30, 21, 14)
+            wrapped = textwrap.wrap(name, width=16)[:3]
+            for line_index, line in enumerate(wrapped):
+                draw.text((cx + 16, cy + 35 + line_index * 30), line, font=font, fill=palette["foreground"])
+            detail = action.get("keyLabel") or ("INSERT ONLY" if action["type"] == "text" else "COMMAND MENU")
+            detail_font = fit_text(draw, detail, cell_w - 30, 17, 13)
+            draw.text((cx + 16, cy + 188), detail, font=detail_font, fill=palette["muted"])
+
+    y = 2475
+    draw.rounded_rectangle((90, y, 2510, y + 390), radius=28, fill="#111827", outline=palette["system"], width=5)
+    draw.text((126, y + 25), "DIALS + PHYSICAL BUTTONS", font=h1_font, fill=palette["system"])
+    for index, dial in enumerate(config["dials"]):
+        x = 126 + index * 1150
+        draw.text((x, y + 105), f"{dial['position'].upper()} DIAL  ·  {dial['name'].upper()}", font=h2_font, fill=palette["foreground"])
+        detail = f"turn: {actions[dial['left']]['shortLabel']}  /  {actions[dial['right']]['shortLabel']}    press: {actions[dial['press']]['shortLabel']}"
+        draw.text((x, y + 160), detail, font=body_font, fill=palette["muted"])
+    draw.text((126, y + 245), "Physical buttons", font=h2_font, fill=palette["foreground"])
+    draw.text((390, y + 249), "1 Commands   2 Agents   3 Skills   4 Quick Text", font=body_font, fill=palette["muted"])
+    draw.text((126, 2920), "Quick text and skill prompts insert into the composer but never press Enter.", font=small_font, fill=palette["muted"])
+
+    from io import BytesIO
+
+    stream = BytesIO()
+    image.save(stream, "PNG", optimize=True)
+    return stream.getvalue()
+
+
 def reference_svg(config: dict, actions: dict) -> str:
     palette = config["palette"]
     rows = []
@@ -618,6 +766,7 @@ def reference_svg(config: dict, actions: dict) -> str:
 
 
 def shortcut_markdown(config: dict, actions: dict) -> str:
+    is_live_s = config["profile"]["deviceType"] == "Loupedeck50"
     lines = [
         "# Codex Controller shortcut reference",
         "",
@@ -653,30 +802,47 @@ def shortcut_markdown(config: dict, actions: dict) -> str:
             press = actions[dial["press"]]["displayName"]
             right = actions[dial["right"]]["displayName"]
         lines.append(f"| {dial['position']} · {dial['name']} | {left} | {press} | {right} |")
+    if is_live_s:
+        lines.extend(
+            [
+                "",
+                "## Physical buttons",
+                "",
+                "1. Commands workspace",
+                "2. Agents workspace",
+                "3. Skills workspace",
+                "4. Quick Text workspace",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "",
+                "## Center wheel",
+                "",
+                "- Rotate left/right: decrease/increase reasoning effort.",
+                "- Touch left/center/right: toggle Plan mode / cycle reasoning / toggle Fast mode.",
+                "",
+                "## Round buttons",
+                "",
+                "1. Commands workspace",
+                "2. Agents workspace",
+                "3. Skills workspace",
+                "4. Quick Text workspace",
+                "5. New Chat",
+                "6. Quick Chat",
+                "7. Toggle Review Panel",
+                "8. Dictation",
+                "",
+                "## Square buttons",
+                "",
+                "- A–D: arrow keys; with FN: Page Up, Home, Page Down, End.",
+                "- E: Command Menu.",
+                "- Home, Enter/Esc, Keyboard, and FN retain their fixed Loupedeck behavior.",
+            ]
+        )
     lines.extend(
         [
-            "",
-            "## Center wheel",
-            "",
-            "- Rotate left/right: decrease/increase reasoning effort.",
-            "- Touch left/center/right: toggle Plan mode / cycle reasoning / toggle Fast mode.",
-            "",
-            "## Round buttons",
-            "",
-            "1. Commands workspace",
-            "2. Agents workspace",
-            "3. Skills workspace",
-            "4. Quick Text workspace",
-            "5. New Chat",
-            "6. Quick Chat",
-            "7. Toggle Review Panel",
-            "8. Dictation",
-            "",
-            "## Square buttons",
-            "",
-            "- A–D: arrow keys; with FN: Page Up, Home, Page Down, End.",
-            "- E: Command Menu.",
-            "- Home, Enter/Esc, Keyboard, and FN retain their fixed Loupedeck behavior.",
             "",
             "## Safety choices",
             "",
@@ -688,22 +854,34 @@ def shortcut_markdown(config: dict, actions: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build() -> None:
-    config = json.loads(SOURCE.read_text(encoding="utf-8"))
+def build(target: str = "ct") -> None:
+    global PACKAGE, LP4
+
+    base_config = json.loads(SOURCE.read_text(encoding="utf-8"))
+    config = config_for_target(base_config, target)
+    is_live_s = target == "live-s"
+    package_dir_name = "package-live-s" if is_live_s else "package"
+    package_file_name = "Codex-Controller-Live-S.LP4" if is_live_s else "Codex-Controller.LP4"
+    PACKAGE = DIST / package_dir_name
+    LP4 = DIST / package_file_name
     profile_cfg = config["profile"]
     palette = config["palette"]
     actions = {action["id"]: action for action in config["actions"]}
 
     assert len(actions) == len(config["actions"]), "Action IDs must be unique"
     assert len(config["pages"]) == 4, "Expected four workspaces"
-    assert all(len(page["buttons"]) == 12 for page in config["pages"]), "Each touch page needs 12 buttons"
-    assert len(config["dials"]) == 6, "Loupedeck CT needs six dial definitions"
+    expected_buttons = 15 if is_live_s else 12
+    expected_dials = 2 if is_live_s else 6
+    assert all(len(page["buttons"]) == expected_buttons for page in config["pages"]), f"Each touch page needs {expected_buttons} buttons"
+    assert len(config["dials"]) == expected_dials, f"Expected {expected_dials} dial definitions"
     assert len(config["roundButtons"]) == 8, "Loupedeck CT needs eight round-button definitions"
 
-    for generated in (PACKAGE, ICONS):
+    generated_paths = (PACKAGE,) if is_live_s else (PACKAGE, ICONS)
+    for generated in generated_paths:
         if generated.exists():
             shutil.rmtree(generated)
         generated.mkdir(parents=True)
+    ICONS.mkdir(parents=True, exist_ok=True)
     DOCS.mkdir(parents=True, exist_ok=True)
     DIST.mkdir(parents=True, exist_ok=True)
     (PACKAGE / "ActionIcons").mkdir()
@@ -751,6 +929,8 @@ def build() -> None:
                 encoder_controls.append(encoder_control(dial["nativePress"], dial["nativeAdjustment"]))
             else:
                 encoder_controls.append(encoder_control(macro_ref(dial["press"]), adjustment_ref(adjustment_id)))
+        if is_live_s:
+            encoder_controls.extend(encoder_control(None, None) for _ in range(6 - len(encoder_controls)))
         encoder_pages.append(
             typed_dict(
                 "Loupedeck.Service.ProfileLayoutEncoderPage, LoupedeckService",
@@ -793,25 +973,29 @@ def build() -> None:
         )
 
     round_controls = []
-    for item in config["roundButtons"]:
+    round_items = config["roundButtons"][:4] if is_live_s else config["roundButtons"]
+    for item in round_items:
         if "workspace" in item:
             press = f"$@Generic___@ChangeWorkspace___{mode_name}|{workspace_ids[item['workspace']]}"
         else:
             press = macro_ref(item["action"])
         round_controls.append(button_control(press))
+    if is_live_s:
+        round_controls.extend(button_control() for _ in range(8 - len(round_controls)))
 
     square = [button_control() for _ in range(12)]
     square_positions = {"A": 6, "B": 7, "C": 9, "D": 10, "E": 11}
-    for name, index in square_positions.items():
-        mapping = config["squareButtons"][name]
-        square[index] = button_control(
-            macro_ref(mapping["press"]),
-            macro_ref(mapping["fn"]) if mapping.get("fn") else None,
-        )
+    if not is_live_s:
+        for name, index in square_positions.items():
+            mapping = config["squareButtons"][name]
+            square[index] = button_control(
+                macro_ref(mapping["press"]),
+                macro_ref(mapping["fn"]) if mapping.get("fn") else None,
+            )
 
     layout_mode = typed_dict(
         "Loupedeck.Service.ProfileLayoutMode20, LoupedeckService",
-        deviceType="None",
+        deviceType=profile_cfg["deviceType"] if is_live_s else "None",
         modeName=mode_name,
         parentModeName=None,
         actions=None,
@@ -944,10 +1128,18 @@ def build() -> None:
             encoding="utf-8",
         )
 
-    (DOCS / "layout-reference.png").write_bytes(reference_png(config, actions))
-    (DOCS / "layout-reference.svg").write_text(reference_svg(config, actions), encoding="utf-8")
-    (DOCS / "shortcut-reference.md").write_text(shortcut_markdown(config, actions), encoding="utf-8")
-    (DIST / "profile-map.json").write_text(
+    docs_dir = DOCS / "live-s" if is_live_s else DOCS
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    if is_live_s:
+        (docs_dir / "codex-controller-live-s-commands.png").write_bytes(live_s_page_preview(config, actions, "commands"))
+        (docs_dir / "codex-controller-live-s-agents.png").write_bytes(live_s_page_preview(config, actions, "agents"))
+        (docs_dir / "layout-reference.png").write_bytes(live_s_reference_png(config, actions))
+    else:
+        (docs_dir / "layout-reference.png").write_bytes(reference_png(config, actions))
+        (docs_dir / "layout-reference.svg").write_text(reference_svg(config, actions), encoding="utf-8")
+    (docs_dir / "shortcut-reference.md").write_text(shortcut_markdown(config, actions), encoding="utf-8")
+    profile_map_name = "profile-map-live-s.json" if is_live_s else "profile-map.json"
+    (DIST / profile_map_name).write_text(
         json.dumps(
             {
                 "profileId": profile_id,
@@ -979,4 +1171,9 @@ def build() -> None:
 
 
 if __name__ == "__main__":
-    build()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target", choices=("ct", "live-s", "all"), default="all")
+    args = parser.parse_args()
+    targets = ("ct", "live-s") if args.target == "all" else (args.target,)
+    for selected_target in targets:
+        build(selected_target)

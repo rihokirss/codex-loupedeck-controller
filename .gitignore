@@ -6,7 +6,9 @@ research/System-reference.LP4
 # Machine-specific installed exports and validation evidence
 dist/Codex-Controller-installed.LP4
 dist/package/
+dist/package-live-s/
 dist/profile-map.json
+dist/profile-map-live-s.json
 docs/change-log.md
 docs/installation-and-rollback.md
 docs/validation-results.json

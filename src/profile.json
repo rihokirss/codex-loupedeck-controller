@@ -7,7 +7,7 @@
     "processOrBundleName": "chatgpt",
     "deviceType": "Loupedeck20",
     "modeName": "main",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "palette": {
     "background": "#0B0F14",
@@ -79,6 +79,7 @@
     {"id":"toggle_bottom","label":"BOTTOM\nPANEL","shortLabel":"PANEL","displayName":"Toggle Bottom Panel","description":"Show or hide the bottom panel","group":"Commands","color":"commands","lucideIcon":"panel-bottom","iconLabel":"BOTTOM","type":"shortcut","key":"ControlOrCommand+KeyJ","keyLabel":"Ctrl+J"},
     {"id":"toggle_sidebar","label":"SIDE\nBAR","shortLabel":"BAR","displayName":"Toggle Sidebar","description":"Show or hide the sidebar","group":"Commands","color":"commands","lucideIcon":"panel-left","iconLabel":"SIDEBAR","type":"shortcut","key":"ControlOrCommand+KeyB","keyLabel":"Ctrl+B"},
     {"id":"dictation","label":"DICTATE\nTEXT","shortLabel":"DICTATE","displayName":"Windows Voice Typing","description":"Start or stop Windows voice typing in the focused Codex composer","group":"Commands","color":"commands","lucideIcon":"mic","iconLabel":"DICTATE","type":"shortcut","key":"Windows+KeyH","keyLabel":"Win+H"},
+    {"id":"voice_chat","label":"VOICE\nCHAT","shortLabel":"VOICE","displayName":"Toggle Voice Chat","description":"Start or stop Codex Voice Chat","group":"Commands","color":"commands","lucideIcon":"mic","iconLabel":"VOICE","type":"shortcut","key":"ControlOrCommand+AltOrOption+Shift+KeyV","keyLabel":"Ctrl+Alt+Shift+V"},
     {"id":"shortcut_help","label":"SHORTCUT\nHELP","shortLabel":"KEYS","displayName":"Keyboard Shortcuts","description":"Open Codex keyboard-shortcut settings","group":"Commands","color":"commands","lucideIcon":"keyboard","iconLabel":"KEYS","type":"shortcut","key":"ControlOrCommand+Shift+Oem2","keyLabel":"Ctrl+Shift+/"},
 
     {"id":"previous_agent","label":"PREV\nAGENT","shortLabel":"PREV","displayName":"Previous Agent","description":"Switch to the previous Codex task/chat","group":"Agents","color":"agents","lucideIcon":"arrow-left","iconLabel":"PREV","type":"shortcut","key":"ControlOrCommand+PageUp","keyLabel":"Ctrl+PageUp"},
@@ -142,7 +143,7 @@
   "wheel": {"name":"Reasoning + Modes","left":"plan_toggle","center":"reason_cycle","right":"fast_toggle","adjustment":"reasoning"},
   "roundButtons": [
     {"workspace":"commands"}, {"workspace":"agents"}, {"workspace":"skills"}, {"workspace":"quick_text"},
-    {"action":"new_chat"}, {"action":"quick_chat"}, {"action":"review_tab"}, {"action":"dictation"}
+    {"action":"new_chat"}, {"action":"quick_chat"}, {"action":"review_tab"}, {"action":"voice_chat"}
   ],
   "squareButtons": {
     "A":{"press":"arrow_up","fn":"page_up"},

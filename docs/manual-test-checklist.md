@@ -21,7 +21,7 @@ Use a disposable Codex chat with no unsaved prompt text. Check off each item onl
 - [ ] 5 starts a New Chat.
 - [ ] 6 opens Quick Chat.
 - [ ] 7 toggles the Review panel.
-- [ ] 8 starts Codex Dictation while the composer is focused.
+- [ ] 8 starts Codex Voice Chat; pressing it again stops the active Voice Chat.
 
 ## Commands touchscreen page
 
@@ -118,6 +118,7 @@ For every item above, confirm the full text appears once, no newline is appended
 - [ ] Settings > Keyboard Shortcuts shows Toggle Fast Mode as `Ctrl+Alt+Shift+F`.
 - [ ] Settings > Keyboard Shortcuts shows Continue in New Chat as `Ctrl+Alt+Shift+N`.
 - [ ] Settings > Keyboard Shortcuts shows Copy as Markdown as `Ctrl+Alt+Shift+C`.
+- [ ] Settings > Keyboard Shortcuts shows Toggle Voice Chat as `Ctrl+Alt+Shift+V`.
 
 ## Square and fixed buttons
 

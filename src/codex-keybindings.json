@@ -24,6 +24,10 @@
     "key": "Ctrl+Shift+D"
   },
   {
+    "command": "composer.startVoiceMode",
+    "key": "Ctrl+Alt+Shift+V"
+  },
+  {
     "command": "forkThread",
     "key": "Ctrl+Alt+Shift+N"
   },
